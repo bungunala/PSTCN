@@ -6,10 +6,13 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
+    
+   // Búsqueda predictiva en la tabla de concursos
+ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.querySelector('#search-concursos');
     const table = document.getElementById('tabla-concursos');
-    const tbody = table ? table.querySelector('tbody') : null;
-    const rows = tbody ? tbody.querySelectorAll('tr') : [];
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.querySelectorAll('tr');
 
     if (searchInput) {
         searchInput.addEventListener('keyup', function () {
@@ -20,4 +23,5 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+});
 });

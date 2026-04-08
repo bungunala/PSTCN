@@ -25,6 +25,19 @@
                     <option value="cerrado" <?= $concurso['estado'] == 'cerrado' ? 'selected' : '' ?>>Cerrado</option>
                 </select>
             </div>
+            <div class="mb-3">
+                <label class="form-label">Imagen del Concurso (PNG ≤5MB)</label>
+                <input type="file" name="imagen" class="form-control" accept="image/png">
+                <?php if (!empty($concurso['imagen_url'])): ?>
+                    <div class="mt-2">
+                        <img src="<?= base_url($concurso['imagen_url']) ?>" alt="Imagen actual" class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
+                        <div class="form-check mt-2">
+                            <input type="checkbox" name="eliminar_imagen" id="eliminar_imagen" class="form-check-input" value="1">
+                            <label for="eliminar_imagen" class="form-check-label">Eliminar imagen actual</label>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -103,13 +116,22 @@
                         <td>
                             <input type="file" name="imagen_<?= $nom['id'] ?>" class="form-control form-control-sm" accept="image/png">
                             <?php if (!empty($nom['imagen_nominado'])): ?>
-                                <a href="<?= base_url($nom['imagen_nominado']) ?>" target="_blank" class="small">Ver foto</a>
+                                <div class="mt-2">
+                                    <a href="<?= base_url($nom['imagen_nominado']) ?>" target="_blank">
+                                        <img src="<?= base_url($nom['imagen_nominado']) ?>" alt="Foto" class="img-thumbnail" style="max-width: 120px; max-height: 120px;">
+                                    </a>
+                                </div>
                             <?php endif; ?>
                         </td>
                         <td>
                             <input type="file" name="video_<?= $nom['id'] ?>" class="form-control form-control-sm" accept="video/mp4">
                             <?php if (!empty($nom['video_nominado'])): ?>
-                                <a href="<?= base_url($nom['video_nominado']) ?>" target="_blank" class="small">Ver video</a>
+                                <div class="mt-2">
+                                    <video controls style="max-width: 240px; max-height: 160px;" class="rounded">
+                                        <source src="<?= base_url($nom['video_nominado']) ?>" type="video/mp4">
+                                        Tu navegador no soporta video HTML5.
+                                    </video>
+                                </div>
                             <?php endif; ?>
                         </td>
                     </tr>

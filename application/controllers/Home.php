@@ -41,7 +41,7 @@ class Home extends CI_Controller {
         }
 
         // Obtener concursos
-        $concursos = $this->Concurso_model->get_all_with_counts();
+        $concursos = $this->Concurso_model->get_all_with_counts_not_in_design();
 
 
         // Agregar estado de nominación para cada concurso

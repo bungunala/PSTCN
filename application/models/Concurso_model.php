@@ -38,6 +38,17 @@ class Concurso_model extends CI_Model {
         return $this->db->get()->result_array();
     }
 
+	public function get_all_with_counts_not_in_design()
+	{
+		$this->db->select('c.*, COUNT(n.id) as total_nominaciones')
+			->from('concursos c')
+			->join('nominaciones n', 'n.concurso_id = c.id', 'left')
+			->group_by('c.id')
+			->order_by('c.fecha_creacion', 'DESC')
+			->where('lower(c.estado) !=','diseño');
+		return $this->db->get()->result_array();
+	}
+
     /**
      * Obtiene un concurso por su ID
      * 

@@ -6,8 +6,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
  * 
  * Controlador para el rol Administrador.
  * Permite gestionar concursos, nominados y resultados.
- * 
-
+ 
  */
 class Admin extends CI_Controller
 {
