@@ -294,7 +294,8 @@ class Admin extends CI_Controller
             $debug_info .= "=== PROCESANDO: {$usuario_email} ===\n";
             
             // Normalizar email para coincidir con las keys de $_FILES (@ -> _)
-            $usuario_id_normalized = strtr($usuario_email, ['@' => '_']);
+            // Usar método alternativo para evitar problemas con strtr
+            $usuario_id_normalized = str_replace(['.'], ['_'], $usuario_email);
             
             // DEBUG: mostrar el resultado y la comparación exacta
             $debug_info .= "email original: {$usuario_email}\n";
@@ -308,7 +309,7 @@ class Admin extends CI_Controller
             $debug_info .= "existe en FILES: " . (isset($_FILES[$key_buscada]) ? 'SI' : 'NO') . "\n";
             $debug_info .= "name value: " . (isset($_FILES[$key_buscada]['name']) ? $_FILES[$key_buscada]['name'] : 'N/A') . "\n";
             $debug_info .= "Keys disponibles en FILES: " . implode(', ', array_keys($_FILES)) . "\n";
-            
+			$debug_info .= "RPP VER: " . $_FILES['imagen_candrade@produccion_gob_ec']['name'] . "\n";
             $imagen_url = null;
             $video_url = null;
 
@@ -334,7 +335,7 @@ class Admin extends CI_Controller
                 
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
-                    $imagen_url = '/assets/fotos/' . $upload_data['file_name'];
+                    $imagen_url = '/public/assets/fotos/' . $upload_data['file_name'];
                     $debug_info .= "Upload imagen OK: {$imagen_url}\n";
                 } else {
                     $debug_info .= "ERROR upload imagen {$usuario_email}: " . $this->upload->display_errors() . "\n";
@@ -361,7 +362,7 @@ class Admin extends CI_Controller
                 
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
-                    $video_url = '/assets/videos/' . $upload_data['file_name'];
+                    $video_url = '/public/assets/videos/' . $upload_data['file_name'];
                     $debug_info .= "Upload video OK: {$video_url}\n";
                 } else {
                     $debug_info .= "ERROR upload video {$usuario_email}: " . $this->upload->display_errors() . "\n";
@@ -388,7 +389,7 @@ class Admin extends CI_Controller
         redirect('admin/gestionar_nominados/' . $concurso_id);
     }
 
-    public function guardar_nominados_old()
+    public function _guardar_nominados_old()
     {
         $concurso_id = $this->input->post('concurso_id');
         $titulo = $this->input->post('titulo');
