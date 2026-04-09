@@ -31,10 +31,10 @@
                 <?php if (!empty($concurso['imagen_url'])): ?>
                     <div class="mt-2">
                         <img src="<?= base_url($concurso['imagen_url']) ?>" alt="Imagen actual" class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
-                        <div class="form-check mt-2">
-                            <input type="checkbox" name="eliminar_imagen" id="eliminar_imagen" class="form-check-input" value="1">
-                            <label for="eliminar_imagen" class="form-check-label">Eliminar imagen actual</label>
-                        </div>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input type="checkbox" name="eliminar_imagen" id="eliminar_imagen" class="form-check-input" value="1">
+                        <label for="eliminar_imagen" class="form-check-label">Eliminar imagen actual</label>
                     </div>
                 <?php endif; ?>
             </div>

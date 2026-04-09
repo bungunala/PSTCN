@@ -216,10 +216,55 @@ class Admin extends CI_Controller
         $estado = $this->input->post('estado');
         $nominados_finales_ids = $this->input->post('nominados_finales') ?: [];
 
+        // DEBUG: guardar en archivo temporal
+        $debug_info = "========== " . date('Y-m-d H:i:s') . " ==========\n";
+        $debug_info .= "concurso_id: " . print_r($concurso_id, true) . "\n";
+        $debug_info .= "nominados_finales_ids: " . print_r($nominados_finales_ids, true) . "\n";
+        $debug_info .= "FILES keys: " . print_r(array_keys($_FILES), true) . "\n";
+        $debug_info .= "FILES: " . print_r($_FILES, true) . "\n";
+        file_put_contents('/tmp/debug_upload.txt', $debug_info, FILE_APPEND);
+
         // Validar estado
         if ($estado === 'votacion' && empty($nominados_finales_ids)) {
             $this->session->set_flashdata('error', 'No se puede pasar a votación sin nominados finales.');
             redirect('admin/gestionar_nominados/' . $concurso_id);
+        }
+
+        // Obtener concurso actual para manejar imagen
+        $concurso_actual = $this->Concurso_model->get_by_id($concurso_id);
+        $imagen_anterior = $concurso_actual['imagen_url'] ?? null;
+        $imagen_url = $imagen_anterior;
+
+        // Eliminar imagen si está marcado el checkbox
+        if ($this->input->post('eliminar_imagen') && $imagen_anterior) {
+            $ruta_archivo = FCPATH . ltrim($imagen_anterior, '/');
+            if (file_exists($ruta_archivo)) {
+                unlink($ruta_archivo);
+            }
+            $imagen_url = null;
+        }
+
+        // Subir nueva imagen (reemplaza si existe)
+        if (!empty($_FILES['imagen']['name'])) {
+            $config['upload_path'] = FCPATH . 'public/assets/images/concursos/';
+            $config['allowed_types'] = 'png';
+            $config['max_size'] = 5120;
+            $config['encrypt_name'] = TRUE;
+
+            $this->load->library('upload');
+            $this->upload->initialize($config);
+
+            if ($this->upload->do_upload('imagen')) {
+                // Eliminar imagen anterior si existía
+                if ($imagen_anterior) {
+                    $ruta_archivo = FCPATH . ltrim($imagen_anterior, '/');
+                    if (file_exists($ruta_archivo)) {
+                        unlink($ruta_archivo);
+                    }
+                }
+                $upload_data = $this->upload->data();
+                $imagen_url = '/public/assets/images/concursos/' . $upload_data['file_name'];
+            }
         }
 
         // Actualizar concurso
@@ -227,6 +272,7 @@ class Admin extends CI_Controller
             'titulo' => $titulo,
             'descripcion' => $descripcion,
             'estado' => $estado,
+            'imagen_url' => $imagen_url,
             'modificado_por' => $this->session->userdata('user_id'),
             'fecha_ult_modificacion' => date('Y-m-d H:i:s')
         ]);
@@ -243,54 +289,93 @@ class Admin extends CI_Controller
         }
 
         // Subir fotos y videos
-        foreach ($nominados_finales_ids as $usuario_id) {
+        foreach ($nominados_finales_ids as $usuario_email) {
+            // DEBUG: verificar que se entra al loop
+            $debug_info .= "=== PROCESANDO: {$usuario_email} ===\n";
+            
+            // Normalizar email para coincidir con las keys de $_FILES (@ -> _)
+            $usuario_id_normalized = strtr($usuario_email, ['@' => '_']);
+            
+            // DEBUG: mostrar el resultado y la comparación exacta
+            $debug_info .= "email original: {$usuario_email}\n";
+            $debug_info .= "normalizado: {$usuario_id_normalized}\n";
+            $debug_info .= "key buscada: imagen_{$usuario_id_normalized}\n";
+            $debug_info .= "comparar con: imagen_candrade@produccion_gob_ec\n";
+            
+            // DEBUG: verificar la clave exacta
+            $key_buscada = 'imagen_' . $usuario_id_normalized;
+            $debug_info .= "Key buscada: {$key_buscada}\n";
+            $debug_info .= "existe en FILES: " . (isset($_FILES[$key_buscada]) ? 'SI' : 'NO') . "\n";
+            $debug_info .= "name value: " . (isset($_FILES[$key_buscada]['name']) ? $_FILES[$key_buscada]['name'] : 'N/A') . "\n";
+            $debug_info .= "Keys disponibles en FILES: " . implode(', ', array_keys($_FILES)) . "\n";
+            
             $imagen_url = null;
             $video_url = null;
 
-            if (!empty($_FILES['imagen_' . $usuario_id]['name'])) {
+            if (!empty($_FILES['imagen_' . $usuario_id_normalized]['name'])) {
+                $debug_info .= "Intentando subir imagen para: {$usuario_email} (key: imagen_{$usuario_id_normalized})\n";
+                
                 $config['upload_path'] = './public/assets/fotos/';
                 $config['allowed_types'] = 'png';
                 $config['max_size'] = 5120;
                 $config['encrypt_name'] = TRUE;
 
                 $this->load->library('upload');
-                $_FILES['file']['name'] = $_FILES['imagen_' . $usuario_id]['name'];
-                $_FILES['file']['type'] = $_FILES['imagen_' . $usuario_id]['type'];
-                $_FILES['file']['tmp_name'] = $_FILES['imagen_' . $usuario_id]['tmp_name'];
-                $_FILES['file']['error'] = $_FILES['imagen_' . $usuario_id]['error'];
-                $_FILES['file']['size'] = $_FILES['imagen_' . $usuario_id]['size'];
+                $_FILES['file']['name'] = $_FILES['imagen_' . $usuario_id_normalized]['name'];
+                $_FILES['file']['type'] = $_FILES['imagen_' . $usuario_id_normalized]['type'];
+                $_FILES['file']['tmp_name'] = $_FILES['imagen_' . $usuario_id_normalized]['tmp_name'];
+                $_FILES['file']['error'] = $_FILES['imagen_' . $usuario_id_normalized]['error'];
+                $_FILES['file']['size'] = $_FILES['imagen_' . $usuario_id_normalized]['size'];
 
                 $this->upload->initialize($config);
+                
+                // DEBUG: verificar directorio existe
+                $debug_info .= "Directorio fotos existe: " . (is_dir('./public/assets/fotos/') ? 'SI' : 'NO') . "\n";
+                
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
                     $imagen_url = '/assets/fotos/' . $upload_data['file_name'];
+                    $debug_info .= "Upload imagen OK: {$imagen_url}\n";
+                } else {
+                    $debug_info .= "ERROR upload imagen {$usuario_email}: " . $this->upload->display_errors() . "\n";
                 }
             }
 
-            if (!empty($_FILES['video_' . $usuario_id]['name'])) {
+            if (!empty($_FILES['video_' . $usuario_id_normalized]['name'])) {
                 $config['upload_path'] = './public/assets/videos/';
                 $config['allowed_types'] = 'mp4';
                 $config['max_size'] = 92160;
                 $config['encrypt_name'] = TRUE;
 
                 $this->load->library('upload');
-                $_FILES['file']['name'] = $_FILES['video_' . $usuario_id]['name'];
-                $_FILES['file']['type'] = $_FILES['video_' . $usuario_id]['type'];
-                $_FILES['file']['tmp_name'] = $_FILES['video_' . $usuario_id]['tmp_name'];
-                $_FILES['file']['error'] = $_FILES['video_' . $usuario_id]['error'];
-                $_FILES['file']['size'] = $_FILES['video_' . $usuario_id]['size'];
+                $_FILES['file']['name'] = $_FILES['video_' . $usuario_id_normalized]['name'];
+                $_FILES['file']['type'] = $_FILES['video_' . $usuario_id_normalized]['type'];
+                $_FILES['file']['tmp_name'] = $_FILES['video_' . $usuario_id_normalized]['tmp_name'];
+                $_FILES['file']['error'] = $_FILES['video_' . $usuario_id_normalized]['error'];
+                $_FILES['file']['size'] = $_FILES['video_' . $usuario_id_normalized]['size'];
 
                 $this->upload->initialize($config);
+                
+                // DEBUG: verificar directorio existe
+                $debug_info .= "Directorio videos existe: " . (is_dir('./public/assets/videos/') ? 'SI' : 'NO') . "\n";
+                
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
                     $video_url = '/assets/videos/' . $upload_data['file_name'];
+                    $debug_info .= "Upload video OK: {$video_url}\n";
+                } else {
+                    $debug_info .= "ERROR upload video {$usuario_email}: " . $this->upload->display_errors() . "\n";
                 }
             }
 
             if ($imagen_url || $video_url) {
-                $this->Nominacion_model->update_media($concurso_id, $usuario_id, $imagen_url, $video_url);
+                $debug_info .= "update_media called - imagen: {$imagen_url}, video: {$video_url}\n";
+                $this->Nominacion_model->update_media($concurso_id, $usuario_email, $imagen_url, $video_url);
             }
         }
+        
+        // DEBUG: escribir resultado final
+        file_put_contents('/tmp/debug_upload.txt', $debug_info, FILE_APPEND);
 
         $this->db->trans_complete();
 
@@ -533,7 +618,7 @@ class Admin extends CI_Controller
         $sheet->getColumnDimension('B')->setWidth(40);
         $sheet->getColumnDimension('E')->setWidth(20);
 
-        $this->excel->save('Concursos_' . date('Ymd') . '.xlsx');
+        $this->excel->save($spreadsheet, 'Concursos_' . date('Ymd') . '.xlsx');
     }
 
     /**
@@ -653,10 +738,14 @@ class Admin extends CI_Controller
     }
 
     // Método auxiliar
-    private function get_nombre_usuario($id)
+    private function get_nombre_usuario($email)
     {
-        $usuario = $this->db->select('nombres, apellidos')->where('id', $id)->get('usuarios')->row();
-        return $usuario ? $usuario->nombres . ' ' . $usuario->apellidos : 'Desconocido';
+        $this->load->model('Usuario_model');
+        $usuario = $this->Usuario_model->get_by_email($email);
+        if ($usuario) {
+            return $usuario['nombres'] . ' ' . $usuario['apellidos'];
+        }
+        return 'Desconocido';
     }
 
 
