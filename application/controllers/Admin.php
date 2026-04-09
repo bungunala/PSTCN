@@ -481,7 +481,7 @@ class Admin extends CI_Controller
                 $this->upload->initialize($config);
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
-                    $imagen_url = '/assets/fotos/' . $upload_data['file_name'];
+                    $imagen_url = '/public/assets/fotos/' . $upload_data['file_name'];
                 } else {
                     $this->session->set_flashdata('error', 'Error en foto de ' . $this->get_nombre_usuario($usuario_id) . ': ' . $this->upload->display_errors());
                 }
@@ -504,7 +504,7 @@ class Admin extends CI_Controller
                 $this->upload->initialize($config);
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
-                    $video_url = '/assets/videos/' . $upload_data['file_name'];
+                    $video_url = '/public/assets/videos/' . $upload_data['file_name'];
                 } else {
                     $this->session->set_flashdata('error', 'Error en video de ' . $this->get_nombre_usuario($usuario_id) . ': ' . $this->upload->display_errors());
                 }
