@@ -74,12 +74,13 @@ $active_group = 'default';
 $query_builder = TRUE;
 
 $db['default'] = array(
-    'dsn'      => "pgsql:host=postgres;port=5432;dbname=pstcn;options='--search_path=public'",
-    'hostname' => 'postgres',
-    'username' => 'postgres',
-    'password' => '123321',
-    'database' => 'pstcn',
-    'dbdriver' => 'pdo',
+    'dsn'      => '',
+    'hostname' => 'localhost',
+    'port'     => '5432',
+    'username' => 'usr_concurso',
+    'password' => 'UsrConcurso@2026',
+    'database' => 'mpcei_concurso',
+    'dbdriver' => 'postgre',
     'dbprefix' => '',
     'pconnect' => FALSE,
     'db_debug' => (ENVIRONMENT !== 'production'),

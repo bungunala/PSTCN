@@ -193,7 +193,7 @@ class Admin extends CI_Controller
         }
 
         $nominados_iniciales = $this->Nominacion_model->get_nominados_iniciales_con_votos($concurso_id);
-        $nominados_finales = $this->Nominacion_model->get_nominados_finales($concurso_id);
+        $nominados_finales = $this->Nominacion_model->get_nominados_finales_con_media($concurso_id);
 
         $data['concurso'] = $concurso;
         $data['nominados_iniciales'] = $nominados_iniciales;
@@ -210,19 +210,19 @@ class Admin extends CI_Controller
 
     public function guardar_nominados()
     {
+        // DEBUG: Log al inicio para confirmar ejecución
+        $debug_msg = "=== INICIO guardar_nominados " . date('Y-m-d H:i:s') . " ===\n";
+        $debug_msg .= "concurso_id: " . $this->input->post('concurso_id') . "\n";
+        $debug_msg .= "estado: " . $this->input->post('estado') . "\n";
+        $debug_msg .= "nominados_finales_ids: " . json_encode($this->input->post('nominados_finales')) . "\n";
+        $debug_msg .= "FILES keys: " . json_encode(array_keys($_FILES)) . "\n";
+        file_put_contents(APPPATH . 'logs/debug_guardar.txt', $debug_msg . "\n", FILE_APPEND);
+        
         $concurso_id = $this->input->post('concurso_id');
         $titulo = $this->input->post('titulo');
         $descripcion = $this->input->post('descripcion');
         $estado = $this->input->post('estado');
         $nominados_finales_ids = $this->input->post('nominados_finales') ?: [];
-
-        // DEBUG: guardar en archivo temporal
-        $debug_info = "========== " . date('Y-m-d H:i:s') . " ==========\n";
-        $debug_info .= "concurso_id: " . print_r($concurso_id, true) . "\n";
-        $debug_info .= "nominados_finales_ids: " . print_r($nominados_finales_ids, true) . "\n";
-        $debug_info .= "FILES keys: " . print_r(array_keys($_FILES), true) . "\n";
-        $debug_info .= "FILES: " . print_r($_FILES, true) . "\n";
-        file_put_contents('/tmp/debug_upload.txt', $debug_info, FILE_APPEND);
 
         // Validar estado
         if ($estado === 'votacion' && empty($nominados_finales_ids)) {
@@ -280,6 +280,16 @@ class Admin extends CI_Controller
         // Sincronizar nominados finales
         $this->db->trans_start();
 
+        // Obtener medios actuales antes de eliminar
+        $medios_actuales = [];
+        $query = $this->db->get_where('nominados_finales', ['concurso_id' => $concurso_id]);
+        foreach ($query->result() as $row) {
+            $medios_actuales[$row->usuario_email] = [
+                'imagen' => $row->imagen_nominado,
+                'video' => $row->video_nominado
+            ];
+        }
+
         // Eliminar todos los actuales
         $this->db->delete('nominados_finales', ['concurso_id' => $concurso_id]);
 
@@ -290,32 +300,28 @@ class Admin extends CI_Controller
 
         // Subir fotos y videos
         foreach ($nominados_finales_ids as $usuario_email) {
-            // DEBUG: verificar que se entra al loop
-            $debug_info .= "=== PROCESANDO: {$usuario_email} ===\n";
+            // Normalizar email como el navegador (solo . -> _, @ se mantiene)
+            $usuario_id_normalized = str_replace('.', '_', $usuario_email);
             
-            // Normalizar email para coincidir con las keys de $_FILES (@ -> _)
-            // Usar método alternativo para evitar problemas con strtr
-            $usuario_id_normalized = str_replace(['.'], ['_'], $usuario_email);
+            // DEBUG: Log de las keys en $_FILES
+            $debug_msg = "=== " . date('Y-m-d H:i:s') . " ===\n";
+            $debug_msg .= "Email: $usuario_email\n";
+            $debug_msg .= "usuario_id_normalized: $usuario_id_normalized\n";
+            $debug_msg .= "Keys en \$_FILES: " . json_encode(array_keys($_FILES)) . "\n";
+            $debug_msg .= "Buscando: imagen_$usuario_id_normalized\n";
+            $debug_msg .= "Existe en FILES: " . (isset($_FILES['imagen_' . $usuario_id_normalized]) ? "YES" : "NO") . "\n";
+            if (isset($_FILES['imagen_' . $usuario_id_normalized])) {
+                $debug_msg .= "File name: " . $_FILES['imagen_' . $usuario_id_normalized]['name'] . "\n";
+                $debug_msg .= "File error: " . $_FILES['imagen_' . $usuario_id_normalized]['error'] . "\n";
+            }
+            file_put_contents(APPPATH . 'logs/debug_guardar.txt', $debug_msg . "\n", FILE_APPEND);
             
-            // DEBUG: mostrar el resultado y la comparación exacta
-            $debug_info .= "email original: {$usuario_email}\n";
-            $debug_info .= "normalizado: {$usuario_id_normalized}\n";
-            $debug_info .= "key buscada: imagen_{$usuario_id_normalized}\n";
-            $debug_info .= "comparar con: imagen_candrade@produccion_gob_ec\n";
-            
-            // DEBUG: verificar la clave exacta
-            $key_buscada = 'imagen_' . $usuario_id_normalized;
-            $debug_info .= "Key buscada: {$key_buscada}\n";
-            $debug_info .= "existe en FILES: " . (isset($_FILES[$key_buscada]) ? 'SI' : 'NO') . "\n";
-            $debug_info .= "name value: " . (isset($_FILES[$key_buscada]['name']) ? $_FILES[$key_buscada]['name'] : 'N/A') . "\n";
-            $debug_info .= "Keys disponibles en FILES: " . implode(', ', array_keys($_FILES)) . "\n";
-			$debug_info .= "RPP VER: " . $_FILES['imagen_candrade@produccion_gob_ec']['name'] . "\n";
             $imagen_url = null;
             $video_url = null;
 
-            if (!empty($_FILES['imagen_' . $usuario_id_normalized]['name'])) {
-                $debug_info .= "Intentando subir imagen para: {$usuario_email} (key: imagen_{$usuario_id_normalized})\n";
-                
+            // Solo procesar si hay archivo nuevo con contenido válido
+            if (!empty($_FILES['imagen_' . $usuario_id_normalized]['name']) 
+                && $_FILES['imagen_' . $usuario_id_normalized]['error'] === 0) {
                 $config['upload_path'] = './public/assets/fotos/';
                 $config['allowed_types'] = 'png';
                 $config['max_size'] = 5120;
@@ -330,19 +336,15 @@ class Admin extends CI_Controller
 
                 $this->upload->initialize($config);
                 
-                // DEBUG: verificar directorio existe
-                $debug_info .= "Directorio fotos existe: " . (is_dir('./public/assets/fotos/') ? 'SI' : 'NO') . "\n";
-                
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
                     $imagen_url = '/public/assets/fotos/' . $upload_data['file_name'];
-                    $debug_info .= "Upload imagen OK: {$imagen_url}\n";
-                } else {
-                    $debug_info .= "ERROR upload imagen {$usuario_email}: " . $this->upload->display_errors() . "\n";
                 }
             }
 
-            if (!empty($_FILES['video_' . $usuario_id_normalized]['name'])) {
+            // Solo procesar si hay archivo nuevo con contenido válido
+            if (!empty($_FILES['video_' . $usuario_id_normalized]['name']) 
+                && $_FILES['video_' . $usuario_id_normalized]['error'] === 0) {
                 $config['upload_path'] = './public/assets/videos/';
                 $config['allowed_types'] = 'mp4';
                 $config['max_size'] = 92160;
@@ -357,26 +359,25 @@ class Admin extends CI_Controller
 
                 $this->upload->initialize($config);
                 
-                // DEBUG: verificar directorio existe
-                $debug_info .= "Directorio videos existe: " . (is_dir('./public/assets/videos/') ? 'SI' : 'NO') . "\n";
-                
                 if ($this->upload->do_upload('file')) {
                     $upload_data = $this->upload->data();
                     $video_url = '/public/assets/videos/' . $upload_data['file_name'];
-                    $debug_info .= "Upload video OK: {$video_url}\n";
-                } else {
-                    $debug_info .= "ERROR upload video {$usuario_email}: " . $this->upload->display_errors() . "\n";
                 }
             }
 
+            // Preservar medios existentes si no se subió nuevo archivo
+            if (empty($imagen_url) && isset($medios_actuales[$usuario_email]['imagen'])) {
+                $imagen_url = $medios_actuales[$usuario_email]['imagen'];
+            }
+            if (empty($video_url) && isset($medios_actuales[$usuario_email]['video'])) {
+                $video_url = $medios_actuales[$usuario_email]['video'];
+            }
+
+            // Solo actualizar si hay algo que guardar
             if ($imagen_url || $video_url) {
-                $debug_info .= "update_media called - imagen: {$imagen_url}, video: {$video_url}\n";
                 $this->Nominacion_model->update_media($concurso_id, $usuario_email, $imagen_url, $video_url);
             }
         }
-        
-        // DEBUG: escribir resultado final
-        file_put_contents('/tmp/debug_upload.txt', $debug_info, FILE_APPEND);
 
         $this->db->trans_complete();
 
@@ -384,51 +385,6 @@ class Admin extends CI_Controller
             $this->session->set_flashdata('success', 'Concurso, nominados finales y media actualizados.');
         } else {
             $this->session->set_flashdata('error', 'Error al actualizar los datos.');
-        }
-
-        redirect('admin/gestionar_nominados/' . $concurso_id);
-    }
-
-    public function _guardar_nominados_old()
-    {
-        $concurso_id = $this->input->post('concurso_id');
-        $titulo = $this->input->post('titulo');
-        $descripcion = $this->input->post('descripcion');
-        $estado = $this->input->post('estado');
-        $nominados_finales_ids = $this->input->post('nominados_finales') ?: [];
-
-        // Validar estado
-        if ($estado === 'votacion' && empty($nominados_finales_ids)) {
-            $this->session->set_flashdata('error', 'No se puede pasar a votación sin nominados finales.');
-            redirect('admin/gestionar_nominados/' . $concurso_id);
-        }
-
-        // Actualizar concurso
-        $this->Concurso_model->update($concurso_id, [
-            'titulo' => $titulo,
-            'descripcion' => $descripcion,
-            'estado' => $estado,
-            'modificado_por' => $this->session->userdata('user_id'),
-            'fecha_ult_modificacion' => date('Y-m-d H:i:s')
-        ]);
-
-        // Sincronizar nominados finales
-        $this->db->trans_start();
-
-        // Eliminar todos los actuales
-        $this->db->delete('nominados_finales', ['concurso_id' => $concurso_id]);
-
-        // Insertar los nuevos
-        foreach ($nominados_finales_ids as $usuario_id) {
-            $this->Nominacion_model->add_nominado_final($concurso_id, $usuario_id);
-        }
-
-        $this->db->trans_complete();
-
-        if ($this->db->trans_status() !== FALSE) {
-            $this->session->set_flashdata('success', 'Concurso y nominados finales actualizados.');
-        } else {
-            $this->session->set_flashdata('error', 'Error al actualizar los nominados finales.');
         }
 
         redirect('admin/gestionar_nominados/' . $concurso_id);
@@ -455,6 +411,7 @@ class Admin extends CI_Controller
         $concurso_id = $this->input->post('concurso_id');
         $usuario_ids = $this->input->post('usuario_id');
 
+
         if (!$usuario_ids) {
             $this->session->set_flashdata('error', 'No se seleccionaron nominados.');
             redirect('admin/gestionar_nominados/' . $concurso_id);
@@ -463,9 +420,10 @@ class Admin extends CI_Controller
         foreach ($usuario_ids as $usuario_id) {
             $imagen_url = null;
             $video_url = null;
+			$usuario_id_normalized = str_replace(['.'], ['_'], $usuario_id);
 
             // Subir foto
-            if (!empty($_FILES['imagen_' . $usuario_id]['name'])) {
+            if (!empty($_FILES['imagen_' . $usuario_id_normalized]['name'])) {
                 $config['upload_path'] = './public/assets/fotos/';
                 $config['allowed_types'] = 'png';
                 $config['max_size'] = 5120;
@@ -488,7 +446,7 @@ class Admin extends CI_Controller
             }
 
             // Subir video
-            if (!empty($_FILES['video_' . $usuario_id]['name'])) {
+            if (!empty($_FILES['video_' . $usuario_id_normalized]['name'])) {
                 $config['upload_path'] = './public/assets/videos/';
                 $config['allowed_types'] = 'mp4';
                 $config['max_size'] = 92160;
@@ -516,6 +474,73 @@ class Admin extends CI_Controller
 
         $this->session->set_flashdata('success', 'Fotos y videos guardados correctamente.');
         redirect('admin/gestionar_nominados/' . $concurso_id);
+    }
+
+    /**
+     * Eliminar media (imagen o video) de un nominado final por AJAX
+     */
+    public function eliminar_media()
+    {
+        $concurso_id = $this->input->post('concurso_id');
+        $usuario_email = $this->input->post('usuario_email');
+        $tipo = $this->input->post('tipo');
+        $ruta = $this->input->post('ruta');
+
+        if (!$concurso_id || !$usuario_email || !$tipo || !$ruta) {
+            echo json_encode(['success' => false, 'message' => 'Parámetros incompletos']);
+            return;
+        }
+
+        // Eliminar archivo físico
+        $ruta_archivo = FCPATH . ltrim($ruta, '/');
+        if (file_exists($ruta_archivo)) {
+            unlink($ruta_archivo);
+        }
+
+        // Actualizar base de datos directamente
+        $campo = ($tipo === 'video') ? 'video_nominado' : 'imagen_nominado';
+        
+        $this->db->where('concurso_id', $concurso_id);
+        $this->db->where('usuario_email', $usuario_email);
+        $this->db->set($campo, null);
+        $result = $this->db->update('nominados_finales');
+
+        if ($result) {
+            echo json_encode(['success' => true, 'message' => ucfirst($tipo) . ' eliminado correctamente']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al actualizar la base de datos']);
+        }
+    }
+
+    /**
+     * Eliminar imagen del concurso por AJAX
+     */
+    public function eliminar_imagen_concurso()
+    {
+        $concurso_id = $this->input->post('concurso_id');
+        $ruta = $this->input->post('ruta');
+
+        if (!$concurso_id || !$ruta) {
+            echo json_encode(['success' => false, 'message' => 'Parámetros incompletos']);
+            return;
+        }
+
+        // Eliminar archivo físico
+        $ruta_archivo = FCPATH . ltrim($ruta, '/');
+        if (file_exists($ruta_archivo)) {
+            unlink($ruta_archivo);
+        }
+
+        // Actualizar base de datos
+        $this->db->where('id', $concurso_id);
+        $this->db->set('imagen_url', null);
+        $result = $this->db->update('concursos');
+
+        if ($result) {
+            echo json_encode(['success' => true, 'message' => 'Imagen del concurso eliminada correctamente']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al actualizar la base de datos']);
+        }
     }
 
     /**

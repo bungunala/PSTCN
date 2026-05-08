@@ -25,7 +25,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 */
 //$config['base_url'] = '';
 //$config['base_url'] = 'http://192.168.2.200:88/PSTCN/';
-$config['base_url'] = 'http://localhost:8080/PSTCN/';
+//$config['base_url'] = 'http://localhost:8080/PSTCN/';
+$config['base_url'] = 'http://192.168.2.171/PSTCN/';
 
 /*
 |--------------------------------------------------------------------------

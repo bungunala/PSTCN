@@ -31,10 +31,7 @@
                 <?php if (!empty($concurso['imagen_url'])): ?>
                     <div class="mt-2">
                         <img src="<?= base_url($concurso['imagen_url']) ?>" alt="Imagen actual" class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
-                    </div>
-                    <div class="form-check mt-2">
-                        <input type="checkbox" name="eliminar_imagen" id="eliminar_imagen" class="form-check-input" value="1">
-                        <label for="eliminar_imagen" class="form-check-label">Eliminar imagen actual</label>
+                        <button type="button" class="btn btn-danger btn-sm ms-2" onclick="eliminarImagenConcurso('<?= $concurso['imagen_url'] ?>', <?= $concurso['id'] ?>)">Eliminar</button>
                     </div>
                 <?php endif; ?>
             </div>
@@ -101,6 +98,7 @@
                     <th>Unidad</th>
                     <th>Foto (PNG ≤5MB)</th>
                     <th>Video (MP4 ≤90MB)</th>
+                    <th>Acción</th>
                 </tr>
             </thead>
             <tbody>
@@ -120,6 +118,7 @@
                                     <a href="<?= base_url($nom['imagen_nominado']) ?>" target="_blank">
                                         <img src="<?= base_url($nom['imagen_nominado']) ?>" alt="Foto" class="img-thumbnail" style="max-width: 120px; max-height: 120px;">
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-danger mt-1" onclick="eliminarMedia('imagen', '<?= $nom['id'] ?>', '<?= $nom['imagen_nominado'] ?>')">Eliminar</button>
                                 </div>
                             <?php endif; ?>
                         </td>
@@ -131,8 +130,19 @@
                                         <source src="<?= base_url($nom['video_nominado']) ?>" type="video/mp4">
                                         Tu navegador no soporta video HTML5.
                                     </video>
+                                    <button type="button" class="btn btn-sm btn-danger mt-1" onclick="eliminarMedia('video', '<?= $nom['id'] ?>', '<?= $nom['video_nominado'] ?>')">Eliminar</button>
                                 </div>
                             <?php endif; ?>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-warning btn-quitar-final-php" 
+                                data-email="<?= $nom['id'] ?>"
+                                data-nombre="<?= html_escape($nom['apellidos'] . ' ' . $nom['nombres']) ?>"
+                                data-provincia="<?= html_escape($nom['provincia']) ?>"
+                                data-ciudad="<?= html_escape($nom['ciudad']) ?>"
+                                data-unidad="<?= html_escape($nom['unidad']) ?>">
+                                Quitar
+                            </button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -154,43 +164,114 @@
         const tablaIniciales = document.getElementById('tabla-iniciales');
         const tablaFinales = document.getElementById('tabla-finales');
 
-        // Mover a finales (COPIA, no elimina)
+        // Mover a finales (ELIMINA de iniciales, no copia)
         // Mover a finales
         btnMover.addEventListener('click', function() {
             const checks = tablaIniciales.querySelectorAll('input[name="nominados_iniciales_check[]"]:checked');
             checks.forEach(cb => {
                 const tr = cb.closest('tr');
-                const email = cb.value; // ← Ahora es el email
+                const email = cb.value;
+                const nombre = tr.cells[2].textContent + ' ' + tr.cells[3].textContent;
+                const provincia = tr.cells[4].textContent;
+                const ciudad = tr.cells[5].textContent;
+                const unidad = tr.cells[6].textContent;
 
                 if (document.querySelector(`#tabla-finales input[value="${email}"]`)) {
                     return; // Ya existe
                 }
 
-                const clone = tr.cloneNode(true);
-                const input = clone.querySelector('input[type="checkbox"]');
-                input.name = 'nominados_finales[]';
-                input.checked = true;
-                input.value = email;
-
-                // Añadir celdas de foto y video
+                // Añadir celdas de foto y video para la fila de finales
                 const celdasMedia = `
-            <td>
-                <input type="file" name="imagen_${email}" class="form-control form-control-sm" accept="image/png">
-            </td>
-            <td>
-                <input type="file" name="video_${email}" class="form-control form-control-sm" accept="video/mp4">
-            </td>
-        `;
-                const trMedia = document.createElement('tr');
-                trMedia.innerHTML = clone.innerHTML + celdasMedia;
-                trMedia.querySelector('input[type="checkbox"]').name = 'nominados_finales[]';
-                trMedia.querySelector('input[type="checkbox"]').checked = true;
-                trMedia.querySelector('input[type="checkbox"]').value = email;
+                    <td>
+                        <input type="file" name="imagen_${email}" class="form-control form-control-sm" accept="image/png">
+                    </td>
+                    <td>
+                        <input type="file" name="video_${email}" class="form-control form-control-sm" accept="video/mp4">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger btn-quitar-final" data-email="${email}" data-nombre="${nombre}" data-provincia="${provincia}" data-ciudad="${ciudad}" data-unidad="${unidad}">Quitar</button>
+                    </td>
+                `;
 
-                document.querySelector('#tabla-finales tbody').appendChild(trMedia);
+                // Crear nueva fila en finales
+                const trFinal = document.createElement('tr');
+                trFinal.innerHTML = `
+                    <td><input type="checkbox" name="nominados_finales[]" value="${email}" checked></td>
+                    <td></td>
+                    <td>${tr.cells[2].textContent}</td>
+                    <td>${tr.cells[3].textContent}</td>
+                    <td>${provincia}</td>
+                    <td>${ciudad}</td>
+                    <td>${unidad}</td>
+                ` + celdasMedia;
+
+                // Agregar evento al botón quitar
+                trFinal.querySelector('.btn-quitar-final').addEventListener('click', function() {
+                    quitarDeFinales(this);
+                });
+
+                document.querySelector('#tabla-finales tbody').appendChild(trFinal);
+
+                // Eliminar la fila de iniciales
+                tr.remove();
             });
 
+            // Actualizar números de fila en ambas tablas
+            actualizarNumerosFila('tabla-iniciales');
+            actualizarNumerosFila('tabla-finales');
+
             checks.forEach(cb => cb.checked = false);
+        });
+
+        // Función para quitar de finales y devolver a iniciales
+        function quitarDeFinales(boton) {
+            const tr = boton.closest('tr');
+            const email = tr.querySelector('input[type="checkbox"]').value;
+            const nombre = boton.dataset.nombre;
+            const provincia = boton.dataset.provincia;
+            const ciudad = boton.dataset.ciudad;
+            const unidad = boton.dataset.unidad;
+
+            // Crear fila en iniciales
+            const trInicial = document.createElement('tr');
+            trInicial.innerHTML = `
+                <td><input type="checkbox" name="nominados_iniciales_check[]" value="${email}"></td>
+                <td></td>
+                <td>${nombre.split(' ')[0] || ''}</td>
+                <td>${nombre.split(' ').slice(1).join(' ') || ''}</td>
+                <td>${provincia}</td>
+                <td>${ciudad}</td>
+                <td>${unidad}</td>
+                <td>0</td>
+            `;
+
+            document.querySelector('#tabla-iniciales tbody').appendChild(trInicial);
+
+            // Eliminar la fila de finales
+            tr.remove();
+
+            // Actualizar números de fila
+            actualizarNumerosFila('tabla-iniciales');
+            actualizarNumerosFila('tabla-finales');
+        }
+
+        // Función para actualizar números de fila
+        function actualizarNumerosFila(tablaId) {
+            const tabla = document.getElementById(tablaId);
+            const filas = tabla.querySelectorAll('tbody tr');
+            filas.forEach((fila, index) => {
+                const celdaNumero = fila.cells[1];
+                if (celdaNumero) {
+                    celdaNumero.textContent = index + 1;
+                }
+            });
+        }
+
+        // Asignar evento a los botones de quitar existentes
+        document.querySelectorAll('.btn-quitar-final, .btn-quitar-final-php').forEach(boton => {
+            boton.addEventListener('click', function() {
+                quitarDeFinales(this);
+            });
         });
 
         // Filtros
@@ -206,4 +287,77 @@
             });
         });
     });
+
+    // Función para eliminar media (imagen/video) por AJAX
+    function eliminarMedia(tipo, usuarioEmail, rutaArchivo) {
+        if (!confirm('¿Está seguro de eliminar este ' + tipo + '?')) {
+            return;
+        }
+
+        const concursoId = document.querySelector('input[name="concurso_id"]')?.value || 
+                          window.location.pathname.split('/').pop();
+
+        fetch('<?= base_url("admin/eliminar_media") ?>', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'concurso_id=' + encodeURIComponent(concursoId) + 
+                  '&usuario_email=' + encodeURIComponent(usuarioEmail) + 
+                  '&tipo=' + encodeURIComponent(tipo) + 
+                  '&ruta=' + encodeURIComponent(rutaArchivo)
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (e) {
+                alert('Error: Respuesta inválida del servidor');
+            }
+        })
+        .catch(error => {
+            alert('Error de conexión: ' + error.message);
+        });
+    }
+
+    // Función para eliminar imagen del concurso por AJAX
+    function eliminarImagenConcurso(rutaArchivo, concursoId) {
+        if (!confirm('¿Está seguro de eliminar la imagen del concurso?')) {
+            return;
+        }
+
+        fetch('<?= base_url("admin/eliminar_imagen_concurso") ?>', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'concurso_id=' + encodeURIComponent(concursoId) + 
+                  '&ruta=' + encodeURIComponent(rutaArchivo)
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (e) {
+                alert('Error: Respuesta inválida del servidor');
+            }
+        })
+        .catch(error => {
+            alert('Error de conexión: ' + error.message);
+        });
+    }
 </script>

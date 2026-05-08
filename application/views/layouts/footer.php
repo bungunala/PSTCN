@@ -3,9 +3,9 @@
     <footer class="footer">
         <div class="container text-center">
             <p class="mb-0">
-                Sistema de Postulación de Concursos | Ministerio de Producción, Comercio Exterior, Inversiones y Pesca
+                Sistema de Postulación de Concursos | Ministerio de Producción, Comercio Exterior e Inversiones
             </p>
-            <small>DTIC 2025</small>
+            <small>MPCEI 2026</small>
         </div>
     </footer>
 

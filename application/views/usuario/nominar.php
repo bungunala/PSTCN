@@ -5,7 +5,9 @@
     <p class="text-muted"><?= html_escape($concurso['descripcion']) ?></p>
 
     <?php if ($concurso['imagen_url']): ?>
-        <img src="<?= base_url($concurso['imagen_url']) ?>" class="img-fluid mb-3" style="max-height: 200px;">
+        <div class="mb-4">
+            <img src="<?= base_url($concurso['imagen_url']) ?>" class="img-fluid rounded shadow" style="width: 100%; max-height: 350px; object-fit: cover;">
+        </div>
     <?php endif; ?>
 
     <div class="alert alert-info text-center">

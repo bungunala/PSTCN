@@ -5,7 +5,9 @@
     <p class="text-muted"><?= html_escape($concurso['descripcion']) ?></p>
 
     <?php if ($concurso['imagen_url']): ?>
-        <img src="<?= base_url($concurso['imagen_url']) ?>" class="img-fluid mb-3" style="max-height: 200px;">
+        <div class="mb-4">
+            <img src="<?= base_url($concurso['imagen_url']) ?>" class="img-fluid rounded shadow" style="width: 100%; max-height: 350px; object-fit: cover;">
+        </div>
     <?php endif; ?>
 
     <div class="alert alert-info text-center">
@@ -60,7 +62,7 @@
                      data-nombre="<?= strtolower($nom['nombres'] . ' ' . $nom['apellidos']) ?>">
                     <div class="card h-100 shadow-sm text-center">
                         <!-- Foto con imagen por defecto -->
-                        <img src="<?= user_image($nom['foto_url']) ?>"
+                        <img src="<?= user_image($nom['imagen_nominado']) ?>"
                              class="card-img-top" style="height: 150px; object-fit: cover;" alt="Foto de <?= $nom['nombres'] ?>">
 
                         <div class="card-body">
@@ -73,7 +75,7 @@
 
                             <!-- Botones de visualización -->
                             <div class="mb-2">
-                                <?php if (!empty($nom['foto_url'])): ?>
+                                <?php if (!empty($nom['imagen_nominado'])): ?>
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
                                             data-bs-toggle="modal" 
                                             data-bs-target="#modalFoto<?= $nom['id'] ?>">
@@ -109,7 +111,7 @@
                 </div>
 
                 <!-- Modal: Foto del Nominado Final -->
-                <?php if (!empty($nom['foto_url'])): ?>
+                <?php if (!empty($nom['imagen_nominado'])): ?>
                 <div class="modal fade" id="modalFoto<?= $nom['id'] ?>" tabindex="-1" aria-labelledby="fotoLabel<?= $nom['id'] ?>" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered modal-lg">
                         <div class="modal-content">
@@ -118,7 +120,7 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body text-center">
-                                <img src="<?= base_url($nom['foto_url']) ?>" class="img-fluid" alt="Foto de <?= $nom['nombres'] ?>">
+                                <img src="<?= base_url($nom['imagen_nominado']) ?>" class="img-fluid" alt="Foto de <?= $nom['nombres'] ?>">
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>

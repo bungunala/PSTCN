@@ -77,6 +77,8 @@ public function validar_usuario_ldap($email)
                 'provincia'  => $user['meta:provincia'] ?? '',
                 'ciudad'     => $user['meta:ciudad'] ?? '',
                 'unidad'     => $user['meta:unidad_organica_fisica'] ?? '',
+                'genero'     => $user['meta:genero'] ?? '',
+                'rol_familiar' => $user['meta:rol_familiar'] ?? '',
                 'cargo'      => $user['meta:cargo'] ?? '',
                 'cedula'     => $user['meta:cedula'] ?? '',
                 'estado'     => 'activo' // Asumimos que si está en el listado, está activo

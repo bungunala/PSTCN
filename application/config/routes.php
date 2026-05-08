@@ -70,6 +70,8 @@ $route['admin/elegir_ganadores/(:num)'] = 'admin/elegir_ganadores/$1';
 $route['admin/guardar_ganadores'] = 'admin/guardar_ganadores';
 $route['admin/exportar_concursos'] = 'admin/exportar_concursos';
 $route['admin/exportar_concurso_detalle/(:num)'] = 'admin/exportar_concurso_detalle/$1';
+$route['admin/eliminar_media'] = 'admin/eliminar_media';
+$route['admin/eliminar_imagen_concurso'] = 'admin/eliminar_imagen_concurso';
 
 // Rutas para Usuario
 $route['usuario/nominar/(:num)'] = 'usuario/nominar/$1';

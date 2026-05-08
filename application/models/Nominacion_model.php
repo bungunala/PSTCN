@@ -258,14 +258,16 @@ class Nominacion_model extends CI_Model {
             if (!$usuario) continue;
 
             $lista[] = [
-                'id' => null,
+                'id' => $row['usuario_email'],
                 'nombres' => $usuario['nombres'],
                 'apellidos' => $usuario['apellidos'],
                 'email' => $usuario['email'],
                 'ciudad' => $usuario['ciudad'],
                 'unidad' => $usuario['unidad'],
-                'foto_url' => $row['imagen_nominado'] ?? $usuario['foto_url'] ?? null,
-                'video_nominado' => $row['video_nominado']
+                'provincia' => $usuario['provincia'] ?? '',
+                'imagen_nominado' => $row['imagen_nominado'] ?? null,
+                'video_nominado' => $row['video_nominado'] ?? null,
+				'foto_url' => $usuario['foto_url'] ?? null
             ];
         }
 

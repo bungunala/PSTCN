@@ -153,6 +153,7 @@ class Usuario_model extends CI_Model {
                     'unidad'     => $user['meta:unidad_organica_fisica'] ?? '',
                     //'genero'     => $this->inferir_genero($user['meta:first_name'] ?? ''),
                     'genero'     => $user['meta:genero'] ?? '',
+                    'rol_familiar' => $user['meta:rol_familiar'] ?? '',
                     'cargo'      => $user['meta:cargo'] ?? '',
                     'cedula'     => $user['meta:cedula'] ?? ''
                 ];
