@@ -1,6 +1,6 @@
 <?php $this->load->view('layouts/header'); ?>
 
-<!-- CDN de Confetti -->
+<!-- CDN de Confetti javascript -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
 <div class="container mt-4">
