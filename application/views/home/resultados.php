@@ -1,5 +1,8 @@
 <?php $this->load->view('layouts/header'); ?>
 
+<!-- CDN de Confetti -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
 <div class="container mt-4">
     <h2><?= html_escape($concurso['titulo']) ?> - Ganadores</h2>
     <p class="text-muted"><?= html_escape($concurso['descripcion']) ?></p>
@@ -111,5 +114,37 @@
         <a href="<?= base_url('home') ?>" class="btn btn-secondary">Regresar al Inicio</a>
     </div>
 </div>
+
+<!-- Script de Confetti -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if (!empty($ganadores)): ?>
+    // Efecto de confeti solo si hay ganadores
+    const duration = 3000; // 3 segundos
+    const end = Date.now() + duration;
+
+    (function frame() {
+        confetti({
+            particleCount: 4,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: ['#ffc107', '#17a2b8', '#28a745', '#dc3545', '#6c757d']
+        });
+        confetti({
+            particleCount: 4,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: ['#ffc107', '#17a2b8', '#28a745', '#dc3545', '#6c757d']
+        });
+
+        if (Date.now() < end) {
+            requestAnimationFrame(frame);
+        }
+    }());
+    <?php endif; ?>
+});
+</script>
 
 <?php $this->load->view('layouts/footer'); ?>
